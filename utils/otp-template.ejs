@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title><%= appName %> — One Time Password</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background:#f4f6f8; padding:20px;">
+    <div style="max-width:600px; margin:auto; background:#fff; border-radius:8px; padding:24px;">
+      <h2 style="margin-top:0;">Hi <%= name %>,</h2>
+      <p>Your One Time Password (OTP) is:</p>
+
+      <div style="font-size:28px; font-weight:bold; letter-spacing:4px; background:#f7f9fc; padding:18px; border-radius:8px; border:1px dashed #ccc; text-align:center;">
+        <%= OTP %>
+      </div>
+
+      <p style="margin-top:20px;">
+        This code is valid for <%= expiryMinutes %> minutes.<br>
+        If you didn’t request this, please ignore this email.
+      </p>
+
+      <hr style="margin:20px 0;">
+      <p style="font-size:12px; color:#555;">
+        &copy; <%= year %> <%= appName %>. Need help? Contact <%= supportEmail %>.
+      </p>
+    </div>
+  </body>
+</html>
