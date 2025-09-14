@@ -86,8 +86,8 @@ body { font-family: Arial; margin:0; display:flex; height:100vh; background:#f5f
 </div>
 
 <script>
-const USER_API = "http://localhost:8000/api/v1/users";
-const MESSAGE_API = "http://localhost:8000/api/v1/message";
+const USER_API = "https://globe-chat-api.vercel.app/api/v1/users";
+const MESSAGE_API = "https://globe-chat-api.vercel.app/api/v1/message";
 let token = null, user = null, pusher = null, activeChatUser = null;
 let pendingMessages = new Set();
 let typingTimeout;
