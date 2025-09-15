@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 
 const blockListSchema = new mongoose.Schema(
   {
-    blockerId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true
     },
-    blockedId: {
+    blockedUser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true
@@ -18,4 +18,7 @@ const blockListSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model("BlockList", blockListSchema);
+export default mongoose.model("BlockDB", blockListSchema);
+blockListSchema.methods.remove = function() {
+  return this.model('BlockDB').deleteOne({ _id: this._id });
+}

@@ -6,6 +6,7 @@ import {
   InboxList,
   getChatMessages,
   markMessagesRead,
+  deleteChatHistory,
 } from "../controllers/message.js";
 
 const router = express.Router();
@@ -38,5 +39,10 @@ router.get("/chat/:id", verifyJWT, getChatMessages);
  * @access  Private
  */
 router.patch("/chat/:chatUserId/read", verifyJWT, markMessagesRead);
-
+/**
+ * @route   DELETE /api/chat/:id
+ * @desc    Delete chat history with a specific user
+ * @access  Private
+ */
+router.delete("/chat/:id", verifyJWT, deleteChatHistory);
 export default router;

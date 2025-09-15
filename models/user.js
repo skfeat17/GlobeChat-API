@@ -55,7 +55,12 @@ const userSchema = new mongoose.Schema(
     },
     refreshToken: {
       type: String,
-    }
+    },blockedUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+      }
+    ],
   },
   {
     timestamps: true

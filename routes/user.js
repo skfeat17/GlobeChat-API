@@ -12,7 +12,10 @@ import {
   resetPassword,
   markOnline,
   markOffline,
-  pusherAuthenticate
+  pusherAuthenticate,
+  searchUsers,
+  blockUser,
+  unblockUser,getAllOnlineUsers
 } from "../controllers/user.js";
 
 import { verifyJWT } from "../middlewares/verify.js";
@@ -37,7 +40,11 @@ router.post("/change-password", verifyJWT, changeUserPassword);
 router.post("/send-otp", sendOTP);
 router.post("/reset-password", resetPassword);
 
-/* ---------- STATUS ---------- */
+/* ---------- OTHERS ---------- */
 router.post('/mark-online', verifyJWT,markOnline) 
 router.post('/mark-offline', verifyJWT, markOffline)
+router.get("/search",verifyJWT, searchUsers);
+router.post("/block/:id", verifyJWT,blockUser);
+router.post("/unblock/:id", verifyJWT, unblockUser);
+router.get("/online-users", verifyJWT, getAllOnlineUsers);
 export default router;

@@ -7,9 +7,9 @@ import jwt from "jsonwebtoken";
 import { sendEmail } from "../utils/nodemailer.js";
 import pkg from "simple-crypto-js";
 const { default: SimpleCrypto } = pkg;
-import {pusher} from "../utils/pusher.js";
-
-
+import { pusher } from "../utils/pusher.js";
+import BlockDB from "../models/blocklist.js";
+import mongoose from "mongoose";
 const httpOptions = {
   httpOnly: true,
   secure: true,
@@ -99,12 +99,12 @@ const uploadAvatar = asyncHandler(async (req, res) => {
 
 //SEND OTP
 const sendOTP = asyncHandler(async (req, res) => {
-  const { email ,username} = req.body;
-  if (!email&&!username) {
+  const { email, username } = req.body;
+  if (!email && !username) {
     throw new ApiError(400, "Email or Username is required");
   }
   // 1. Find user by email
-  const user = await User.findOne({ $or:[{email} ,{username}]});
+  const user = await User.findOne({ $or: [{ email }, { username }] });
   if (!user) {
     throw new ApiError(404, "User not found");
   }
@@ -263,16 +263,47 @@ const changeUserPassword = asyncHandler(async (req, res) => {
 
 // ✅ GET USER PROFILE
 const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select("-password -refreshToken");
-  if (!user) throw new ApiError(404, "User not found");
+  const userId = new mongoose.Types.ObjectId(req.user._id);
 
-  res.status(200).json(new ApiResponse(200, user, "Profile fetched successfully"));
+  const result = await User.aggregate([
+    { $match: { _id: userId } },
+    {
+      $lookup: {
+        from: "users", // same collection
+        localField: "blockedUsers",
+        foreignField: "_id",
+        as: "blockedUsersDetails"
+      }
+    },
+    {
+      $project: {
+        password: 0,
+        refreshToken: 0,
+        "blockedUsersDetails.password": 0,
+        "blockedUsersDetails.refreshToken": 0,
+        "blockedUsersDetails.__v": 0,
+        "blockedUsersDetails.blockedUsers": 0,
+        "blockedUsersDetails.isOnline": 0,
+        "blockedUsersDetails.email": 0,
+        "blockedUsersDetails.lastSeen": 0,
+        "blockedUsersDetails.bio": 0,
+        "blockedUsersDetails.createdAt": 0,
+        "blockedUsersDetails.updatedAt": 0
+      }
+    }
+  ]);
+
+  if (!result.length) throw new ApiError(404, "User not found");
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, result[0], "Profile fetched successfully"));
 });
 
 //MARK ONLINE STATUS
-export const markOnline = asyncHandler(async (req,res) => {
+export const markOnline = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-   const user = await User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     userId,
     { isOnline: true },
     { new: true }
@@ -282,7 +313,7 @@ export const markOnline = asyncHandler(async (req,res) => {
     userId: user._id,
     isOnline: true,
   });
-  res.status(200).json(new ApiResponse(200,null,"Marked Online"))
+  res.status(200).json(new ApiResponse(200, null, "Marked Online"))
 })
 //MARK OFFLINE STATUS
 export const markOffline = asyncHandler(async (req, res) => {
@@ -306,15 +337,15 @@ export const markOffline = asyncHandler(async (req, res) => {
 
 
 //PUSHER AUTHENTICATION 
-export const pusherAuthenticate = asyncHandler(async (req,res) => {
+export const pusherAuthenticate = asyncHandler(async (req, res) => {
   const socketId = req.body.socket_id;
   const channel = req.body.channel_name;
 
   if (!req.user) return res.status(403).send("Unauthorized");
 
-  if(channel.startsWith("presence-")){
+  if (channel.startsWith("presence-")) {
     const presenceData = {
-      user_id: req.user._id, 
+      user_id: req.user._id,
       user_info: { name: req.user.username }
     };
     const auth = pusher.authenticate(socketId, channel, presenceData);
@@ -326,6 +357,69 @@ export const pusherAuthenticate = asyncHandler(async (req,res) => {
 });
 
 
+// SEARCH USERS BY NAME OR USERNAME
+export const searchUsers = asyncHandler(async (req, res) => {
+  const query = req.query.q?.trim();
+  if (!query) throw new ApiError(400, "Search query is required");
+
+  // Case-insensitive partial match using regex
+  const regex = new RegExp(query, "i");
+
+  // Exclude the logged-in user from results
+  const users = await User.find({
+    $or: [{ name: regex }, { username: regex }],
+    _id: { $ne: req.user._id },
+  }).select("name username avatar gender isOnline lastSeen");
+
+  if (!users || users.length === 0)
+    throw new ApiError(404, "No users found matching your query");
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, users, "Users fetched successfully"));
+});
+
+export const blockUser = asyncHandler(async (req, res) => {
+  const userIdToBlock = req.params.id;
+  const myUserId = req.user._id;
+  if (!userIdToBlock) throw new ApiError(400, "User ID to block is required");
+  const blockedRelationship = await BlockDB.findOne({ user: myUserId, blockedUser: userIdToBlock });
+  if (blockedRelationship) {
+    throw new ApiError(409, "User is already blocked");
+  }
+  const newBlock = new BlockDB({ user: myUserId, blockedUser: userIdToBlock });
+  await newBlock.save();
+  await User.findByIdAndUpdate(myUserId, { $addToSet: { blockedUsers: userIdToBlock } });
+  res.status(200).json(new ApiResponse(200, null, "User blocked successfully"));
+});
+export const unblockUser = asyncHandler(async (req, res) => {
+  const userIdToUnblock = req.params.id;
+  const myUserId = req.user._id;
+  if (!userIdToUnblock) throw new ApiError(400, "User ID to unblock is required");
+  const blockedRelationship = await BlockDB.findOne({ user: myUserId, blockedUser: userIdToUnblock });
+  if (!blockedRelationship) throw new ApiError(404, "Blocked relationship not found");
+
+  const blockRecordId = blockedRelationship._id;
+  await BlockDB.findByIdAndDelete(blockRecordId);
+  await User.findByIdAndUpdate(myUserId, { $pull: { blockedUsers: userIdToUnblock } });
+  res.status(200).json(new ApiResponse(200, null, "User unblocked successfully"));
+});
+
+
+export const getAllOnlineUsers = asyncHandler(async (req, res) => {
+  const onlineUsers = await User.find({
+    isOnline: true,
+    _id: { $ne: req.user._id }   // exclude current user
+  }).select("name username avatar gender lastseen");
+
+  if (!onlineUsers || onlineUsers.length === 0) {
+    throw new ApiError(404, "No online users found");
+  }
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, onlineUsers, "Online users fetched successfully"));
+});
 
 export {
   registerUser,
@@ -336,5 +430,5 @@ export {
   refreshAccessToken,
   changeUserPassword,
   getUserProfile,
-  sendOTP,resetPassword
+  sendOTP, resetPassword
 };
