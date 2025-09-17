@@ -39,12 +39,16 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All required fields must be provided");
   }
 
-  const existingUser = await User.findOne({
-    $or: [{ email }, { username }],
-  });
+  // Check email first
+  const emailExists = await User.findOne({ email });
+  if (emailExists) {
+    throw new ApiError(409, "User already exists with this email");
+  }
 
-  if (existingUser) {
-    throw new ApiError(409, "User already exists with this email or username");
+  // Check username next
+  const usernameExists = await User.findOne({ username });
+  if (usernameExists) {
+    throw new ApiError(409, "User already exists with this username");
   }
 
   const user = await User.create({
@@ -54,6 +58,14 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     gender,
   });
+
+  res.status(201).json({
+    success: true,
+    message: "User registered successfully",
+    user,
+  });
+});
+
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
 
