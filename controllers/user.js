@@ -12,7 +12,6 @@ import BlockDB from "../models/blocklist.js";
 import mongoose from "mongoose";
 const httpOptions = {
   httpOnly: true,
-  secure: true,
 };
 
 // ✅ Generate Tokens
