@@ -423,6 +423,77 @@ export const getAllOnlineUsers = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, onlineUsers, "Online users fetched successfully"));
 });
+// ADD FRIEND
+export const addFriend = asyncHandler(async (req, res) => {
+  const friendId = req.params.id;
+  const myUserId = req.user._id;
+
+  if (!friendId) throw new ApiError(400, "Friend ID is required");
+  if (friendId.toString() === myUserId.toString()) {
+    throw new ApiError(400, "You cannot add yourself as a friend");
+  }
+
+  // Check if blocked in either direction
+  const isBlocked = await BlockDB.findOne({
+    $or: [
+      { user: myUserId, blockedUser: friendId },
+      { user: friendId, blockedUser: myUserId }
+    ]
+  });
+  if (isBlocked) throw new ApiError(403, "Cannot add friend. One of you is blocked");
+
+  const user = await User.findById(myUserId);
+  const friend = await User.findById(friendId);
+
+  if (!friend) throw new ApiError(404, "User to add as friend not found");
+
+  // Check if already friends
+  if (user.friends.includes(friendId)) {
+    throw new ApiError(409, "You are already friends");
+  }
+
+  // Add each other
+  await User.findByIdAndUpdate(myUserId, { $addToSet: { friends: friendId } });
+  await User.findByIdAndUpdate(friendId, { $addToSet: { friends: myUserId } });
+
+  res.status(200).json(new ApiResponse(200, null, "Friend added successfully"));
+});
+
+
+// REMOVE FRIEND
+export const removeFriend = asyncHandler(async (req, res) => {
+  const friendId = req.params.id;
+  const myUserId = req.user._id;
+
+  if (!friendId) throw new ApiError(400, "Friend ID is required");
+
+  const user = await User.findById(myUserId);
+  if (!user.friends.includes(friendId)) {
+    throw new ApiError(404, "This user is not your friend");
+  }
+
+  // Remove from both sides
+  await User.findByIdAndUpdate(myUserId, { $pull: { friends: friendId } });
+  await User.findByIdAndUpdate(friendId, { $pull: { friends: myUserId } });
+
+  res.status(200).json(new ApiResponse(200, null, "Friend removed successfully"));
+});
+
+
+// GET FRIENDS LIST
+export const getFriends = asyncHandler(async (req, res) => {
+  const myUserId = req.user._id;
+
+  const user = await User.findById(myUserId)
+    .populate({
+      path: "friends",
+      select: "name username avatar gender isOnline lastSeen bio"
+    });
+
+  if (!user) throw new ApiError(404, "User not found");
+
+  res.status(200).json(new ApiResponse(200, user.friends, "Friends fetched successfully"));
+});
 
 export {
   registerUser,
