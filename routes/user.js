@@ -19,7 +19,8 @@ import {
   getAllOnlineUsers,
   addFriend,
   removeFriend,
-  getFriends
+  getFriends,
+  getUserDetails
 } from "../controllers/user.js";
 
 import { verifyJWT } from "../middlewares/verify.js";
@@ -58,5 +59,6 @@ router.get("/online-users", verifyJWT, getAllOnlineUsers);
 router.post("/friends/add/:id", verifyJWT, addFriend);
 router.post("/friends/remove/:id", verifyJWT, removeFriend);
 router.get("/friends", verifyJWT, getFriends);
+router.get("/getUserDetails/:id", verifyJWT, getUserDetails);
 
 export default router;

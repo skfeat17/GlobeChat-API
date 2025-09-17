@@ -495,6 +495,22 @@ export const getFriends = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, user.friends, "Friends fetched successfully"));
 });
 
+// GET USER DETAILS BY ID
+export const getUserDetails = asyncHandler(async (req, res) => {
+  const userId = req.params.id;
+
+  if (!userId) throw new ApiError(400, "User ID is required");
+
+  const user = await User.findById(userId).select(
+    "name username avatar gender bio isOnline lastSeen"
+  );
+
+  if (!user) throw new ApiError(404, "User not found");
+
+  res.status(200).json(new ApiResponse(200, user, "User details fetched successfully"));
+});
+
+
 export {
   registerUser,
   logInUser,
