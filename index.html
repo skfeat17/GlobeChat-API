@@ -1,322 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Messenger Clone</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://js.pusher.com/8.2/pusher.min.js"></script>
-<style>
-body { font-family: Arial; margin:0; display:flex; height:100vh; background:#f5f7fb; }
-#sidebar { width:280px; border-right:1px solid #ccc; background:#fff; display:flex; flex-direction:column; transition: all 0.3s ease; }
-#sidebar.hidden { transform: translateX(-100%); position:absolute; z-index:1000; }
-#userInfo { padding:15px; border-bottom:1px solid #eee; background:#fafafa; display:flex; justify-content:space-between; align-items:center; }
-#inbox { flex:1; overflow-y:auto; }
-.chatItem { padding:10px; display:flex; cursor:pointer; border-bottom:1px solid #f2f2f2; }
-.chatItem:hover { background:#f0f0f0; }
-.chatItem img { width:40px; height:40px; border-radius:50%; margin-right:10px; }
-.chatItem .meta { flex:1; }
-.chatItem .name { font-weight:bold; }
-.chatItem .last { color:#666; font-size:13px; }
-.status { font-size:12px; color:#888; }
-.status.online { color:green; }
+  <meta charset="UTF-8">
+  <title>Responsive Chat App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://js.pusher.com/8.2/pusher.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://js.pusher.com/beams/2.1.0/push-notifications-cdn.js"></script>
+  <style>
+    /* Typing indicator dots */
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      height: 10px;
+    }
 
-#chat { flex:1; display:flex; flex-direction:column; position:relative; }
-#chatHeader { padding:10px 15px; border-bottom:1px solid #ccc; background:#fff; display:flex; justify-content:space-between; align-items:center; }
-#chatHeader h3 { margin:0; font-size:1.1rem; word-break:break-word; flex:1; }
-#chatStatus { font-size:0.85rem; color:#666; }
-#messages { flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; background:#e9edf5; }
-.msg-wrapper { display:flex; margin:5px 0; }
-.msg { display:inline-block; max-width:70%; padding:10px; border-radius:12px; word-wrap:break-word; }
-.msg.me { margin-left:auto; background:#007bff; color:#fff; }
-.msg.other { margin-right:auto; background:#fff; border:1px solid #ddd; color:#000; }
-.msg.typing { font-style:italic; color:#007bff; background:#e0e0e0; border-radius:12px; }
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background-color: gray;
+      border-radius: 50%;
+      display: inline-block;
+      animation: bounce 1s infinite;
+    }
 
-#composer { display:flex; padding:10px; border-top:1px solid #ccc; background:#fff; }
-#composer input { flex:1; padding:10px; border:1px solid #ccc; border-radius:20px; }
-#composer button { margin-left:10px; padding:10px 15px; border:none; border-radius:20px; background:#007bff; color:#fff; cursor:pointer; }
-#typingIndicator {
-  font-size: 0.75rem; /* smaller font */
-  color: #007bff;     /* blue color */
-  height: 18px;       /* keep height for spacing */
-  margin-top: 2px;    /* optional spacing */
-}
+    .typing-dots span:nth-child(1) {
+      animation-delay: 0s;
+    }
 
-@media (max-width:768px){
-  #sidebar { position:absolute; height:100%; z-index:1000; background:#fff; }
-  #chat { flex:1; }
-}
-</style>
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+  </style>
 </head>
-<body>
 
-<div id="sidebar">
-  <div id="userInfo">
-    <span id="currentUser"></span>
-    <button class="btn btn-sm btn-danger" onclick="logout()">Logout</button>
+<body class="h-screen flex flex-col bg-gray-50">
+
+  <!-- Navbar -->
+  <nav class="fixed top-0 left-0 w-full bg-blue-500 text-white p-4 shadow-md z-10">
+    <h1 class="text-lg sm:text-xl font-bold text-center">REAL TIME CHAT</h1>
+  </nav>
+
+  <!-- Chat container -->
+  <div id="chatBox" class="flex-1 mt-16 mb-24 p-4 flex flex-col gap-3 overflow-auto"></div>
+
+  <!-- Input -->
+  <div class="fixed bottom-0 left-0 w-full p-3 bg-gray-100 flex items-center gap-2">
+    <input type="text" id="messageInput"
+      class="flex-grow p-3 text-base border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+      placeholder="Type a message...">
+    <button id="sendButton"
+      class="bg-blue-500 text-white px-4 py-2 text-base rounded-xl hover:bg-blue-600">Send</button>
   </div>
-  <div id="inbox"></div>
-</div>
 
-<div id="chat">
-  <div id="chatHeader">
-    <div>
-      <h3 id="chatWith">Select a chat</h3>
-      <div id="chatStatus" class="status"></div>
-      <div id="typingIndicator"></div>
-    </div>
-    <button id="toggleSidebarBtn" class="btn btn-sm btn-primary" onclick="toggleSidebar()">☰</button>
-  </div>
-  <div id="messages"></div>
-  <div id="composer">
-    <input type="text" id="messageInput" placeholder="Type a message..." />
-    <button onclick="sendMessage()">Send</button>
-  </div>
-</div>
+  <script>
+    if (Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+    const USER_API = "https://globe-chat-api.vercel.app/api/v1/users";
+    const token = localStorage.getItem("accessToken");
+    const username = "User" + Math.floor(Math.random() * 1000);
 
-<div class="modal fade" id="loginModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content p-3">
-      <h5 class="modal-title mb-3">Login</h5>
-      <input type="text" id="loginUsername" class="form-control mb-2" placeholder="Username">
-      <input type="password" id="loginPassword" class="form-control mb-3" placeholder="Password">
-      <button class="btn btn-primary w-100" onclick="login()">Login</button>
-    </div>
-  </div>
-</div>
+    const beamsClient = new PusherPushNotifications.Client({
+  instanceId: "e7c78238-d563-465f-ba04-ef4d1157e744",
+});
 
-<script>
-const USER_API = "https://globe-chat-api.vercel.app/api/v1/users";
-const MESSAGE_API = "https://globe-chat-api.vercel.app/api/v1/message";
-let token = null, user = null, pusher = null, activeChatUser = null;
-let pendingMessages = new Set();
-let typingTimeout;
-
-// Show login modal
-const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-loginModal.show();
-
-// Sidebar toggle
-function toggleSidebar() { document.getElementById("sidebar").classList.toggle("hidden"); }
-
-// Login
-async function login() {
-  const username = document.getElementById("loginUsername").value.trim();
-  const password = document.getElementById("loginPassword").value.trim();
-  if (!username || !password) return alert("Enter credentials");
-
+async function initBeams() {
   try {
-    const res = await fetch(`${USER_API}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message);
-
-    token = data.data.accessToken;
-    user = data.data.user;
-    document.getElementById("currentUser").innerText = user.username;
-    loginModal.hide();
-
-    markOnline();
-    window.addEventListener("beforeunload", markOffline);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === 'visible') markOnline();
-      else markOffline();
-    });
-
-    initPusher();
-    loadInbox();
-  } catch (e) {
-    alert("Login failed: " + e.message);
+    await beamsClient.start();
+    await beamsClient.addDeviceInterest("chat"); // all devices subscribed to "chat"
+    console.log("Beams registered & subscribed!");
+  } catch (err) {
+    console.error("Beams init error:", err);
   }
 }
 
-// Mark online/offline
-async function markOnline() { if (!token) return; await fetch(`${USER_API}/mark-online`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }); }
-async function markOffline() { if (!token) return; await fetch(`${USER_API}/mark-offline`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }); }
+initBeams();
 
-// Initialize Pusher
-function initPusher() {
-  pusher = new Pusher("f154a4e3ab24faa32519", {
-    cluster: "ap2",
-    authEndpoint: `${USER_API}/pusher/auth`,
-    auth: { headers: { Authorization: `Bearer ${token}` } },
-    enableClientEvents: true
-  });
+    const pusher = new Pusher("f154a4e3ab24faa32519", {
+      cluster: "ap2",
+      authEndpoint: `${USER_API}/pusher/auth`,
+      auth: { headers: { Authorization: `Bearer ${token}` } }
+    });
 
-  if (!user) return;
+    const channel = pusher.subscribe("private-chat");
+    const chatBox = document.getElementById("chatBox");
+    let typingTimeout;
 
-  // Subscribe to presence channel for online status
-  const presenceChannel = pusher.subscribe('presence-globchat');
+    // Add message to chat
+    function addMessage(text, type) {
+      const div = document.createElement("div");
+      div.textContent = text;
 
-  presenceChannel.bind('pusher:member_added', member => {
-    if (activeChatUser && member.id === activeChatUser._id) updateChatStatus(true);
-    loadInbox();
-  });
-
-  presenceChannel.bind('pusher:member_removed', member => {
-    if (activeChatUser && member.id === activeChatUser._id) updateChatStatus(false);
-    loadInbox();
-  });
-
-  // Subscribe to private chat channel
-  const chatChannel = pusher.subscribe(`private-chat-${user._id}`);
-
-  // Listen for incoming messages
-  chatChannel.bind("new-message", msg => {
-    if (!pendingMessages.has(msg._id)) {
-      pendingMessages.add(msg._id);
-      if (activeChatUser && (msg.senderId === activeChatUser._id || msg.receiverId === activeChatUser._id)) {
-        addMessage(msg, msg.senderId === user._id);
-        scrollMessages();
+      if (type === "received") {
+        div.className =
+          "px-4 py-3 text-base bg-gray-200 text-gray-900 rounded-3xl self-start max-w-[85%] sm:max-w-[70%]";
+      } else {
+        div.className =
+          "px-4 py-3 text-base bg-blue-500 text-white rounded-3xl self-end max-w-[85%] sm:max-w-[70%]";
       }
+
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
-    loadInbox();
-  });
 
- // Typing event
-  presenceChannel.bind(`client-typing-${user._id}`, data=>{
-    if(activeChatUser && data.senderId===activeChatUser._id){
-      const indicator = document.getElementById("typingIndicator");
-      indicator.innerText="Typing...";
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(()=>indicator.innerText="", 1000);
+    // Send message
+    function sendMessage() {
+      const input = document.getElementById("messageInput");
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      addMessage(`${msg}`, "sent");
+      channel.trigger("client-new-message", { text: msg, user: username });
+      input.value = "";
     }
-  });
-}
 
-// Typing trigger
-document.getElementById("messageInput").addEventListener("input", ()=>{
-  if(activeChatUser && pusher){
-    const presenceChannel = pusher.channel('presence-globchat');
-    if(presenceChannel) presenceChannel.trigger(`client-typing-${activeChatUser._id}`, { senderId:user._id });
-  }
-});
-// Time ago helper
-function timeAgo(ts) {
-  if (!ts) return "";
-  const t = new Date(ts);
-  const diff = new Date() - t;
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return `${sec} sec ago`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} min ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} hr ago`;
-  const day = Math.floor(hr / 24);
-  return `${day} day${day > 1 ? 's' : ''} ago`;
-}
-
-// Load inbox
-async function loadInbox() {
-  if (!token) return;
-  const res = await fetch(`${MESSAGE_API}/inbox`, { headers: { Authorization: `Bearer ${token}` } });
-  const data = await res.json();
-  const inboxDiv = document.getElementById("inbox");
-  inboxDiv.innerHTML = "";
-
-  let latestChat = null;
-  data.data.forEach(chat => {
-    const participant = chat.participant;
-    const item = document.createElement("div");
-    item.className = "chatItem";
-    item.innerHTML = `
-      <img src="${participant.avatar || 'https://via.placeholder.com/40'}"/>
-      <div class="meta">
-        <div class="name">${participant.name}</div>
-        <div class="last">${chat.lastMessage?.message || "[File]"}</div>
-        <div class="status ${participant.isOnline ? 'online' : ''}">
-          ${participant.isOnline ? 'Active now' : 'Last seen ' + timeAgo(participant.lastSeen)}
-        </div>
-      </div>`;
-    item.onclick = () => openChat(participant);
-    inboxDiv.appendChild(item);
-
-    if (!latestChat || new Date(chat.lastMessage?.createdAt || 0) > new Date(latestChat.lastMessage?.createdAt || 0)) latestChat = participant;
-  });
-
-  if (latestChat && !activeChatUser) openChat(latestChat);
-}
-
-// Open chat
-async function openChat(chatUser) {
-  activeChatUser = chatUser;
-  document.getElementById("chatWith").innerText = chatUser.name;
-  updateChatStatus(chatUser.isOnline);
-  await loadChatMessages(chatUser._id);
-  if (window.innerWidth < 768) toggleSidebar();
-}
-
-// Update chat status
-function updateChatStatus(isOnline) {
-  const statusDiv = document.getElementById("chatStatus");
-  statusDiv.innerText = isOnline ? "Active now" : "Offline";
-  statusDiv.className = "status " + (isOnline ? "online" : "");
-}
-
-// Load chat messages
-async function loadChatMessages(otherUserId) {
-  if (!token) return;
-  const res = await fetch(`${MESSAGE_API}/chat/${otherUserId}?limit=50`, { headers: { Authorization: `Bearer ${token}` } });
-  const data = await res.json();
-  const messagesDiv = document.getElementById("messages");
-  messagesDiv.innerHTML = "";
-  pendingMessages.clear();
-  data.data.slice().reverse().forEach(msg => {
-    pendingMessages.add(msg._id);
-    addMessage(msg, msg.senderId === user._id);
-  });
-  scrollMessages();
-}
-
-// Send message
-let sending = false;
-async function sendMessage() {
-  if (!activeChatUser) return alert("Select a chat first");
-  const text = document.getElementById("messageInput").value.trim();
-  if (!text || sending) return;
-  sending = true;
-  document.getElementById("messageInput").value = "";
-
-  try {
-    await fetch(`${MESSAGE_API}/send/${activeChatUser._id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ message: text })
+    // Trigger typing
+    const inputField = document.getElementById("messageInput");
+    inputField.addEventListener("input", () => {
+      channel.trigger("client-typing", { user: username });
     });
-    sending = false;
-  } catch (e) {
-    sending = false;
-    alert("Send failed: " + e.message);
+
+    // Listen for new messages
+ channel.bind("client-new-message", (data) => {
+  if (data.user !== username) {
+    addMessage(`${data.text}`, "received");
+
+    // Show notification via Beams
+    if (Notification.permission === "granted") {
+      new Notification("📩 New Message", {
+        body: `${data.user}: ${data.text}`,
+        icon: "https://cdn-icons-png.flaticon.com/512/726/726623.png"
+      });
+    }
   }
-}
-
-// Scroll messages
-function scrollMessages() { const m = document.getElementById("messages"); m.scrollTop = m.scrollHeight; }
-
-// Add message bubble
-function addMessage(msg, isMe) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "msg-wrapper";
-  wrapper.style.justifyContent = isMe ? "flex-end" : "flex-start";
-
-  const div = document.createElement("div");
-  div.className = "msg " + (isMe ? "me" : "other");
-  div.innerText = msg.message || "[File]";
-
-  wrapper.appendChild(div);
-  document.getElementById("messages").appendChild(wrapper);
-}
-
-// Enter key send
-document.getElementById("messageInput").addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
-// Logout
-function logout() { token = null; user = null; activeChatUser = null; markOffline(); location.reload(); }
-</script>
+
+
+    // Listen for typing events
+    channel.bind("client-typing", (data) => {
+      if (data.user !== username) {
+        let bubble = document.getElementById("typingBubble");
+        if (!bubble) {
+          bubble = document.createElement("div");
+          bubble.id = "typingBubble";
+          bubble.className =
+            "px-4 py-3 text-base bg-gray-200 text-gray-900 rounded-3xl self-start max-w-[85%] sm:max-w-[70%]";
+          bubble.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+          chatBox.appendChild(bubble);
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+          if (bubble) chatBox.removeChild(bubble);
+        }, 1200);
+      }
+    });
+
+    document.getElementById("sendButton").addEventListener("click", sendMessage);
+    inputField.addEventListener("keypress", e => {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
 </body>
 </html>
