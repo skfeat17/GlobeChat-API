@@ -33,7 +33,8 @@ router.post("/register", registerUser);
 router.post("/login", logInUser);
 router.post("/logout", verifyJWT, logOutUser);
 router.post("/refresh-token", refreshAccessToken);
-router.post("/pusher/auth", verifyJWT, pusherAuthenticate);
+// router.post("/pusher/auth", verifyJWT, pusherAuthenticate);
+router.post("/pusher/auth", pusherAuthenticate);
 
 /* ---------- PROFILE ---------- */
 router.get("/profile", verifyJWT, getUserProfile);
@@ -62,3 +63,4 @@ router.get("/friends", verifyJWT, getFriends);
 router.get("/getUserDetails/:id", verifyJWT, getUserDetails);
 
 export default router;
+
