@@ -344,12 +344,13 @@ export const pusherAuthenticate = asyncHandler(async (req, res) => {
   const socketId = req.body.socket_id;
   const channel = req.body.channel_name;
 
-  if (!req.user) return res.status(403).send("Unauthorized");
+  // if (!req.user) return res.status(403).send("Unauthorized");
 
   if (channel.startsWith("presence-")) {
     const presenceData = {
-      user_id: req.user._id,
-      user_info: { name: req.user.username }
+      // user_id: req.user._id,
+      // user_info: { name: req.user.username }
+      user:"sucess"
     };
     const auth = pusher.authenticate(socketId, channel, presenceData);
     res.send(auth);
@@ -522,3 +523,4 @@ export {
   getUserProfile,
   sendOTP, resetPassword
 };
+
