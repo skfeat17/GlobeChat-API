@@ -77,7 +77,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
     await beamsClient.publishToInterests([`chat-${receiverId}`], {
       web: {
         notification: {
-          title: `New message from ${req.user.name}`,
+          title: `${req.user.name}`,
           body: preview,
           icon: req.user.avatar|| "https://cdn-icons-png.flaticon.com/512/726/726623.png",
           deep_link: `https://yourchatapp.com/chat/${senderId}`,
