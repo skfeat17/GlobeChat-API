@@ -1,5 +1,3 @@
-
-
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -10,12 +8,8 @@ import mongoose from "mongoose";
 import PushNotifications from "@pusher/push-notifications-server";
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
 import BlockDB from "../models/blocklist.js";
+import beamsClient from "../config/beam.js";
 
-//BEAM CLIENT FOR NOTIFICATIONS
-const beamsClient = new PushNotifications({
-  instanceId: "e7c78238-d563-465f-ba04-ef4d1157e744",
-  secretKey: process.env.BEAMS_SECRET, // store secret in .env
-});
 
 // 🔑 Encryption helpers
 const encryptMsg = (data) => {

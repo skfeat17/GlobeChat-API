@@ -22,7 +22,7 @@ import {
   getFriends,
   getUserDetails
 } from "../controllers/user.js";
-
+import beamsClient from "../config/beam.js";
 import { verifyJWT } from "../middlewares/verify.js";
 import { upload } from "../middlewares/multer.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -70,7 +70,7 @@ router.post("/beams/auth",verifyJWT, (req, res) => {
   const beamsToken = beamsClient.generateToken(userId);
   res.json(beamsToken);
  } catch (error) {
- throw new ApiError(500, "Failed to generate Beams token");
+ throw new ApiError(500, err.message);
  } 
  
 });
