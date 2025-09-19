@@ -339,18 +339,27 @@ export const markOffline = asyncHandler(async (req, res) => {
 });
 
 
-//PUSHER AUTHENTICATION 
+// PUSHER AUTHENTICATION
 export const pusherAuthenticate = asyncHandler(async (req, res) => {
   const socketId = req.body.socket_id;
   const channel = req.body.channel_name;
 
-  if (!req.user) return res.status(403).send("Unauthorized");
+  // Example: If you already have `req.user` from JWT middleware
+  // otherwise, fallback to a random guest user
+  const user = req.user || {
+    _id: "guest_" + Math.floor(Math.random() * 10000),
+    username: "Guest" + Math.floor(Math.random() * 1000),
+  };
 
   if (channel.startsWith("presence-")) {
     const presenceData = {
-      user_id: req.user._id,
-      user_info: { name: req.user.username }
+      user_id: user._id.toString(), // must be unique per user
+      user_info: {
+        username: user.username,
+        // you can also add more fields like avatar, email, etc.
+      },
     };
+
     const auth = pusher.authenticate(socketId, channel, presenceData);
     res.send(auth);
   } else {
@@ -358,7 +367,6 @@ export const pusherAuthenticate = asyncHandler(async (req, res) => {
     res.send(auth);
   }
 });
-
 
 // SEARCH USERS BY NAME OR USERNAME
 export const searchUsers = asyncHandler(async (req, res) => {
@@ -522,3 +530,5 @@ export {
   getUserProfile,
   sendOTP, resetPassword
 };
+
+
