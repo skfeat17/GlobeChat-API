@@ -5,7 +5,6 @@ import Message from "../models/message.js";
 import pkg from "simple-crypto-js";
 const { default: SimpleCrypto } = pkg;
 import mongoose from "mongoose";
-import PushNotifications from "@pusher/push-notifications-server";
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
 import BlockDB from "../models/blocklist.js";
 import beamsClient from "../config/beam.js";
@@ -68,18 +67,19 @@ export const sendMessage = asyncHandler(async (req, res) => {
   };
   const savedMessage = await Message.create(newMessage);
 
+
   // ✅ Push Notification (Web/PWA)
   try {
     const preview = message
       ? (message.length > 100 ? message.substring(0, 97) + "..." : message)
       : "📎 Sent you a file";
 
-    await beamsClient.publishToUsers([receiverId.toString()], {
+    await beamsClient.publishToInterests([`chat-${receiverId}`], {
       web: {
         notification: {
-          title: receiverId || "New Message",
+          title: `New message from ${req.user.name}`,
           body: preview,
-          icon: receiverId.avatar || "https://cdn-icons-png.flaticon.com/512/726/726623.png",
+          icon: req.user.avatar|| "https://cdn-icons-png.flaticon.com/512/726/726623.png",
           deep_link: `https://yourchatapp.com/chat/${senderId}`,
         },
       },
