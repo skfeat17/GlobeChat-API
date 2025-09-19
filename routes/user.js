@@ -25,6 +25,7 @@ import {
 
 import { verifyJWT } from "../middlewares/verify.js";
 import { upload } from "../middlewares/multer.js";
+import { ApiError } from "../utils/ApiError.js";
 
 const router = Router();
 
@@ -62,5 +63,16 @@ router.post("/friends/remove/:id", verifyJWT, removeFriend);
 router.get("/friends", verifyJWT, getFriends);
 router.get("/getUserDetails/:id", verifyJWT, getUserDetails);
 
+///PUSH NOTIFICATIONS
+router.post("/beams/auth",verifyJWT, (req, res) => {
+ try {
+  const userId = req.user._id.toString(); 
+  const beamsToken = beamsClient.generateToken(userId);
+  res.json(beamsToken);
+ } catch (error) {
+ throw new ApiError(500, "Failed to generate Beams token");
+ } 
+ 
+});
 export default router;
 

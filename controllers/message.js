@@ -7,16 +7,14 @@ import Message from "../models/message.js";
 import pkg from "simple-crypto-js";
 const { default: SimpleCrypto } = pkg;
 import mongoose from "mongoose";
-import Pusher from "pusher";
+import PushNotifications from "@pusher/push-notifications-server";
 import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
 import BlockDB from "../models/blocklist.js";
-// 🔔 Pusher setup
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID,
-  key: process.env.PUSHER_KEY,
-  secret: process.env.PUSHER_SECRET,
-  cluster: process.env.PUSHER_CLUSTER,
-  useTLS: true,
+
+//BEAM CLIENT FOR NOTIFICATIONS
+const beamsClient = new PushNotifications({
+  instanceId: "e7c78238-d563-465f-ba04-ef4d1157e744",
+  secretKey: process.env.BEAMS_SECRET, // store secret in .env
 });
 
 // 🔑 Encryption helpers
@@ -44,19 +42,21 @@ export const sendMessage = asyncHandler(async (req, res) => {
   if (!message && !req.file) {
     throw new ApiError(400, "Message or file is required");
   }
-  // Check if sender has blocked receiver or vice-versa
+
+  // ✅ Check if blocked
   const blockRecord = await BlockDB.findOne({
     $or: [
       { user: senderId, blockedUser: receiverId },
       { user: receiverId, blockedUser: senderId },
     ],
-  }); 
+  });
   if (blockRecord) {
     throw new ApiError(403, "Message cannot be sent as one user has blocked the other");
   }
+
   let fileUrl = null;
 
-  // ✅ Upload file to Cloudinary if present
+  // ✅ Upload file to Cloudinary
   if (req.file) {
     try {
       fileUrl = await uploadToCloudinary(req.file.buffer, "chat_files");
@@ -65,34 +65,46 @@ export const sendMessage = asyncHandler(async (req, res) => {
     }
   }
 
-  // Prepare message object
+  // ✅ Save message
   const newMessage = {
     senderId,
     receiverId,
     message: message ? encryptMsg(message) : null,
-    file: fileUrl, // Cloudinary URL
+    file: fileUrl,
   };
-
   const savedMessage = await Message.create(newMessage);
 
-  // For response & realtime event, send decrypted message
-  const payload = {
-    _id: savedMessage._id,
-    senderId,
-    receiverId,
-    message: message || null,
-    file: savedMessage.file || null,
-    createdAt: savedMessage.createdAt,
-  };
+  // ✅ Push Notification (Web/PWA)
+  try {
+    const preview = message
+      ? (message.length > 100 ? message.substring(0, 97) + "..." : message)
+      : "📎 Sent you a file";
 
-  // 🔔 Trigger realtime event
-  pusher.trigger(`private-chat-${receiverId}`, "new-message", payload);
-  pusher.trigger(`private-chat-${senderId}`, "new-message", payload);
+    await beamsClient.publishToUsers([receiverId.toString()], {
+      web: {
+        notification: {
+          title: receiverId || "New Message",
+          body: preview,
+          icon: receiverId.avatar || "https://cdn-icons-png.flaticon.com/512/726/726623.png",
+          deep_link: `https://yourchatapp.com/chat/${senderId}`,
+        },
+      },
+      data: {
+        senderId: senderId.toString(),
+        messageId: savedMessage._id.toString(),
+      },
+    });
+
+    console.log("✅ Push notification sent!");
+  } catch (err) {
+    console.error("❌ Push notification error:", err);
+  }
 
   return res
     .status(201)
-    .json(new ApiResponse(201, payload, "Message Sent Successfully"));
+    .json(new ApiResponse(201, { savedMessage }, "Message Sent Successfully"));
 });
+
 // 📥 INBOX LIST
 export const InboxList = asyncHandler(async (req, res) => {
   const user = req.user._id;

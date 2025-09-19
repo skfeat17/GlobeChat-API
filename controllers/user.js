@@ -343,27 +343,25 @@ export const markOffline = asyncHandler(async (req, res) => {
 export const pusherAuthenticate = asyncHandler(async (req, res) => {
   const socketId = req.body.socket_id;
   const channel = req.body.channel_name;
-
+  const user = req.user;
   // Example: If you already have `req.user` from JWT middleware
   // otherwise, fallback to a random guest user
-  const user = req.user || {
-    _id: "guest_" + Math.floor(Math.random() * 10000),
-    username: "Guest" + Math.floor(Math.random() * 1000),
-  };
+ 
 
-  if (channel.startsWith("presence-")) {
+  if (channel.startsWith("presence-global")) {
     const presenceData = {
-      user_id: user._id.toString(), // must be unique per user
+      user_id: user._id, // must be unique per user
       user_info: {
         username: user.username,
+        name : user.name,
+        avatar: user.avatar,
         // you can also add more fields like avatar, email, etc.
       },
     };
-
-    const auth = pusher.authenticate(socketId, channel, presenceData);
+    const auth = pusher.authorizeChannel(socketId, channel, presenceData);
     res.send(auth);
   } else {
-    const auth = pusher.authenticate(socketId, channel);
+    const auth = pusher.authorizeChannel(socketId, channel);
     res.send(auth);
   }
 });
