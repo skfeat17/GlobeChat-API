@@ -341,30 +341,30 @@ export const markOffline = asyncHandler(async (req, res) => {
 
 // PUSHER AUTHENTICATION
 export const pusherAuthenticate = asyncHandler(async (req, res) => {
-  const socketId = req.body.socket_id;
-  const channel = req.body.channel_name;
-  const user = req.user;
-  // Example: If you already have `req.user` from JWT middleware
-  // otherwise, fallback to a random guest user
- 
+  try {
+    const socketId = req.body.socket_id;
+    const channel = req.body.channel_name;
+    const user = req.user;
 
-  if (channel.startsWith("presence-global")) {
-    const presenceData = {
-      user_id: user._id, // must be unique per user
-      user_info: {
-        username: user.username,
-        name : user.name,
-        avatar: user.avatar,
-        // you can also add more fields like avatar, email, etc.
-      },
-    };
-    const auth = pusher.authorizeChannel(socketId, channel, presenceData);
-    res.send(auth);
-  } else {
-    const auth = pusher.authorizeChannel(socketId, channel);
-    res.send(auth);
+    if (!user) return res.status(401).json({ message: "User not authenticated" });
+
+    if (channel.startsWith("presence-global")) {
+      const presenceData = {
+        user_id: user._id.toString(),
+        user_info: { username: user.username, name: user.name, avatar: user.avatar },
+      };
+      const auth = pusher.authorizeChannel(socketId, channel, presenceData);
+      res.send(auth);
+    } else {
+      const auth = pusher.authorizeChannel(socketId, channel);
+      res.send(auth);
+    }
+  } catch (err) {
+    console.error("❌ Pusher auth error:", err);
+    res.status(500).json({ message: "Pusher auth failed", error: err.message });
   }
 });
+
 
 // SEARCH USERS BY NAME OR USERNAME
 export const searchUsers = asyncHandler(async (req, res) => {
