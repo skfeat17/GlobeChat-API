@@ -35,7 +35,7 @@ router.post("/login", logInUser);
 router.post("/logout", verifyJWT, logOutUser);
 router.post("/refresh-token", refreshAccessToken);
 // router.post("/pusher/auth", verifyJWT, pusherAuthenticate);
-router.post("/pusher/auth", pusherAuthenticate);
+router.post("/pusher/auth",verifyJWT, pusherAuthenticate);
 
 /* ---------- PROFILE ---------- */
 router.get("/profile", verifyJWT, getUserProfile);
