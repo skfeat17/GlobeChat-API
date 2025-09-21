@@ -29,6 +29,50 @@ const generateAccessAndRefreshTokens = async (userId) => {
     throw new ApiError(500, "Error generating tokens");
   }
 };
+// ✅ REGISTER
+const registerUser = asyncHandler(async (req, res) => {
+  let { name, email, username, password, gender } = req.body;
+
+  if (!name || !email || !username || !password) {
+    throw new ApiError(400, "All required fields must be provided");
+  }
+
+  // convert to lowercase
+  email = email.toLowerCase().trim();
+  username = username.toLowerCase().trim();
+
+  const existingUsername = await User.findOne({ username });
+  if (existingUsername) {
+    throw new ApiError(409, "User already exists with this username");
+  }
+
+  const existingEmail = await User.findOne({ email });
+  if (existingEmail) {
+    throw new ApiError(409, "User already exists with this email");
+  }
+
+  const user = await User.create({
+    name,
+    email,
+    username,
+    password,
+    gender,
+  });
+
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+
+  const createdUser = await User.findById(user._id).select("-password -refreshToken");
+  res.status(201)
+    .cookie("accessToken", accessToken, httpOptions)
+    .cookie("refreshToken", refreshToken, httpOptions)
+    .json(
+      new ApiResponse(
+        201,
+        { user: createdUser, accessToken, refreshToken },
+        "User registered successfully"
+      )
+    );
+});
 
 // ✅ LOGIN
 const logInUser = asyncHandler(async (req, res) => {
@@ -502,6 +546,7 @@ export {
   getUserProfile,
   sendOTP, resetPassword
 };
+
 
 
 
