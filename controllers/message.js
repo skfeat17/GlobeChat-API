@@ -80,7 +80,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
           title: `${req.user.name}`,
           body: preview,
           icon: req.user.avatar|| "https://cdn-icons-png.flaticon.com/512/726/726623.png",
-          deep_link: `https://globe-chat-web-app.vercel.app/chat/${senderId}`,
+          deep_link: `https://globe-chat-web-app.vercel.app/`,
         },
       },
       data: {
